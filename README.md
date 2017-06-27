@@ -1,0 +1,3 @@
+# wins-go
+
+Completely experimental
