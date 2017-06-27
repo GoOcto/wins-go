@@ -35,6 +35,10 @@ var X *xgbutil.XUtil
 
 
 
+func Init() {
+}
+
+
 
 func CreateWindow(title string, width int, height int, quit bool) *xwindow.Window {
 
@@ -108,12 +112,19 @@ func CreateWindow(title string, width int, height int, quit bool) *xwindow.Windo
 }
 
 
-func ExecWindow() {
+func ExecMain() {
 	xevent.Main(X)
 }
 
 
+func FillWindow(window *xwindow.Window, image image.Image) {
 
+	imgx := xgraphics.NewConvert(X,image)
+	imgx.XSurfaceSet(window.Id)
+	imgx.XDraw()
+	imgx.XPaint(window.Id)
+
+}
 
 
 

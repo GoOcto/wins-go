@@ -2,18 +2,11 @@ package main
 
 import (
 	"fmt"
-//	"goocto.com/grafx"
-//
-//	"github.com/BurntSushi/xgbutil"
-//	"github.com/BurntSushi/xgbutil/xevent"
-//	"github.com/BurntSushi/xgbutil/xgraphics"
-//
-//	"github.com/BurntSushi/xgbutil/xwindow"
-//	"github.com/BurntSushi/xgbutil/ewmh"
-//	"github.com/BurntSushi/xgbutil/icccm"
-//	"github.com/BurntSushi/xgbutil/keybind"
-//	"github.com/BurntSushi/xgbutil/mousebind"
 	Wins "github.com/GoOcto/wins-go"
+
+	"os"
+	"image"
+	_ "image/jpeg"
 )
 
 
@@ -25,36 +18,31 @@ func main() {
 
 	fmt.Println("About to go Stellar!!")
 
-	//img := grafx.First()
 
+	// Load an image
+	pwd, _ := os.Getwd()
+	fImg, err := os.Open(pwd+"/Koala.jpg")
+	if err!=nil {
+		fmt.Println("Open error",err)
+	}
+	defer fImg.Close()
+
+	img, str, err := image.Decode(fImg)
+	if err!=nil {
+		fmt.Println("Decode error",err)
+	}
+	if str!="" {
+		fmt.Println("Image format ",str)
+	}
+
+	rect := img.Bounds()
+	wid := rect.Max.X
+	hgt := rect.Max.Y
+
+
+	// create a Window and use it to show the image
 	Wins.Init()
-	Wins.CreateWindow("My Go Window",400,400,true)
-
-	// output it to X Windows
-	//X, _ := xgbutil.NewConn()
-
-	// Now convert it into an X image.
-	//ximg := xgraphics.NewConvert(X, img)
-
-	//ximg.XShowExtra("Window", true)  // basic default win behaviour
-	//showImage( ximg, "Window", true )  // window with more features
-
-	//xevent.Main(X)
-
-	Wins.ExecWindow()
+	win := Wins.CreateWindow("My Go Window",wid,hgt,true)
+	Wins.FillWindow(win,img)
+	Wins.ExecMain()
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
