@@ -8,10 +8,20 @@ import (
 	"unsafe"
 	"image"
 	_ "image/jpeg"
+	"image/draw"
 	//"image/color"
 	"fmt"
 )
 
+
+
+
+var hdcmem w32.HDC
+var pixels unsafe.Pointer
+var hbmp w32.HBITMAP
+
+var wid int
+var hgt int
 
 
 
@@ -25,14 +35,17 @@ func WndProc(hWnd w32.HWND, msg uint32, wParam, lParam uintptr) (uintptr) {
 //			wid = int( w32.LOWORD(uint32(lParam)) )
 //			hgt = int( w32.HIWORD(uint32(lParam)) )
 
-//		case w32.WM_PAINT:
-//			var ps w32.PAINTSTRUCT
-//			hdc := w32.BeginPaint(hWnd,&ps)
-//			//LoadWin(hWnd)
-//			if  hdcmem>0  {
-//				w32.BitBlt( hdc, 0, 0, wid, hgt,  hdcmem, 0, 0, w32.SRCCOPY )
-//			}
-//			w32.EndPaint(hWnd,&ps)
+		case w32.WM_PAINT:
+			if  hdcmem>0  {
+				var ps w32.PAINTSTRUCT
+				hdc := w32.BeginPaint(hWnd,&ps)
+
+				hbmold := w32.SelectObject( hdcmem, w32.HGDIOBJ(hbmp) )
+				w32.BitBlt(hdc, 0, 0, wid, hgt, hdcmem, 0, 0, w32.SRCCOPY )
+				w32.SelectObject( hdcmem, hbmold )
+
+				w32.EndPaint(hWnd,&ps)
+			}
 
 		case w32.WM_DESTROY:
 			w32.PostQuitMessage(0)
@@ -86,7 +99,7 @@ func CreateWindow(title string, width int, height int, quit bool) w32.HWND {
 
 	//LoadWin(hWnd)
 
-	w32.ShowWindow( hWnd, w32.SW_SHOW )
+	//w32.ShowWindow( hWnd, w32.SW_SHOW ) // implied in CreateWindowEx
 
 	//MakeSurface(hWnd)
 
@@ -138,48 +151,75 @@ func MakeSurface(hWnd w32.HWND, wid int, hgt int, pixels *unsafe.Pointer) w32.HB
 
 
 
-func FillWindow(hwnd w32.HWND, image image.Image) {
+func FillWindow(hwnd w32.HWND, img image.Image) {
 
-	rect := image.Bounds()
-	wid := rect.Max.X
-	hgt := rect.Max.Y
+	rect := img.Bounds()
+	wid = rect.Max.X
+	hgt = rect.Max.Y
 
 
 	//fmt.Println("Pixels",pixels)
 
 	hdc := w32.GetDC( hwnd )
-	hdcmem := w32.CreateCompatibleDC( hdc )
+	hdcmem = w32.CreateCompatibleDC( hdc )
 
-	var pixels unsafe.Pointer
-	hbmp := MakeSurface(hwnd,wid,hgt,&pixels)
+	hbmp = MakeSurface(hwnd,wid,hgt,&pixels)
 	fmt.Println("Pixels",pixels)
 
 
+
+
+	rgba := image.NewRGBA(rect)
+	draw.Draw( rgba, rect, img, rect.Min, draw.Src )
+
+
+	alt := 0 // for some reason alt = 1 causes Window to lock up
 
 	for x:=0;x<wid;x++ {
 		for y:=0;y<hgt;y++ {
 
 			idx := 4*(y*wid + x)
-			ptr := unsafe.Pointer( uintptr(pixels) + uintptr(idx) )
-			p := (*[4]uint8)( ptr )
 
-			r,g,b,_ := image.At(x,y).RGBA()
+			dstptr := unsafe.Pointer( uintptr(pixels) + uintptr(idx) )
+			P := (*[4]uint8)( dstptr )
 
-			p[2] = uint8(r>>8)
-			p[1] = uint8(g>>8)
-			p[0] = uint8(b>>8)
+			if alt==0 {
+				rgbapx := unsafe.Pointer(&rgba.Pix[0])
+				srcptr := unsafe.Pointer( uintptr(rgbapx) + uintptr(idx) )
+				R := (*[4]uint8)( srcptr )
+
+				P[0] = R[2]
+				P[1] = R[1]
+				P[2] = R[0]
+			} else {
+				r,g,b,_ := img.At(x,y).RGBA()
+				//_,_,_ = r,g,b
+				//img.At(0,0)
+				P[2] = uint8(r>>8)
+				P[1] = uint8(g>>8)
+				P[0] = uint8(b>>8)
+			}
+
 		}
 	}
 
 
-	hbmold := w32.SelectObject( hdcmem, w32.HGDIOBJ(hbmp) )
 
+
+
+//	wrct := new(w32.RECT)
+//	wrct.Right  = int32(wid)
+//	wrct.Bottom = int32(hgt)
+//	w32.InvalidateRect(hwnd,wrct,false)
+
+	hbmold := w32.SelectObject( hdcmem, w32.HGDIOBJ(hbmp) )
 	w32.BitBlt(hdc, 0, 0, wid, hgt, hdcmem, 0, 0, w32.SRCCOPY )
+	w32.SelectObject( hdcmem, hbmold )
+
 
 	// this never gets called
-	w32.SelectObject( hdcmem, hbmold )
-	w32.DeleteDC( hdc )
-	//w32.ReleaseDC( hdcmem )
+	w32.ReleaseDC( hwnd, hdc )
+	//w32.DeleteDC( hdcmem )
 
 
 }

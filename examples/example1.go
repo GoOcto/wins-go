@@ -43,6 +43,7 @@ func main() {
 	// create a Window and use it to show the image
 	Wins.Init()
 	win := Wins.CreateWindow("My Go Window",wid,hgt,true)
+	//_ = win
 	Wins.FillWindow(win,img)
 	Wins.ExecMain()
 }
